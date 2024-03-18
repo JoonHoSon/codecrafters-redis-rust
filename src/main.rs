@@ -3,13 +3,14 @@
 
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::thread;
 
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
 
     for stream in listener.incoming() {
-        match stream {
+        thread::spawn(move || match stream {
             Ok(mut st) => {
                 let mut buffer: [u8; 1024] = [0; 1024];
 
@@ -22,6 +23,7 @@ fn main() {
             Err(e) => {
                 println!("error: {e}")
             }
-        }
+        });
+
     }
 }
