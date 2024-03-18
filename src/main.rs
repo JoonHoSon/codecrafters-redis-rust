@@ -1,7 +1,7 @@
 // Uncomment this block to pass the first stage
 // use std::net::TcpListener;
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpListener;
 
 fn main() {
@@ -11,28 +11,13 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(mut st) => {
-                // st.write("+PONG\r\n".as_bytes()).unwrap();
-                st.write("+PONG\r\n+PONG".as_bytes()).unwrap();
-                // for stream in listener.incoming() {
-                //     match stream {
-                //         Ok(mut st) => {
-                //             let mut buffer = vec![0; 4096];
-                //
-                //             while let Ok(read) = st.read(&mut buffer) {
-                //                 if read == 0 {
-                //                     break;
-                //                 }
-                //
-                //                 let received = String::from_utf8_lossy(buffer.as_slice());
-                //
-                //
-                //             }
-                //         }
-                //         Err(e) => {
-                //             println!("error: {e}")
-                //         }
-                //     }
-                // }
+                let mut buffer: [u8; 1024] = [0; 1024];
+
+                while let Ok(_) = st.read(&mut buffer) {
+                    st.write("+PONG\r\n".as_bytes()).unwrap();
+                }
+
+                st.flush().unwrap();
             }
             Err(e) => {
                 println!("error: {e}")
