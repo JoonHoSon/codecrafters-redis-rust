@@ -11,7 +11,28 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(mut st) => {
-                st.write("+PONG\r\n".as_bytes()).unwrap();
+                // st.write("+PONG\r\n".as_bytes()).unwrap();
+                st.write("+PONG\r\n+PONG".as_bytes()).unwrap();
+                // for stream in listener.incoming() {
+                //     match stream {
+                //         Ok(mut st) => {
+                //             let mut buffer = vec![0; 4096];
+                //
+                //             while let Ok(read) = st.read(&mut buffer) {
+                //                 if read == 0 {
+                //                     break;
+                //                 }
+                //
+                //                 let received = String::from_utf8_lossy(buffer.as_slice());
+                //
+                //
+                //             }
+                //         }
+                //         Err(e) => {
+                //             println!("error: {e}")
+                //         }
+                //     }
+                // }
             }
             Err(e) => {
                 println!("error: {e}")
