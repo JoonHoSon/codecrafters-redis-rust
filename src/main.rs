@@ -19,8 +19,22 @@ fn main() {
         thread::spawn(move || match stream {
             Ok(mut st) => {
                 let mut buffer: [u8; 1024] = [0; 1024];
+                let mut read: Vec<u8> = vec![];
+                
+                loop {
+                    let rr = st.read(&mut buffer).expect("Stream read fail!");
+                    
+                    if rr == 0 {
+                        break;
+                    }
 
-                while let Ok(_) = st.read(&mut buffer) {
+                    read.append(&mut buffer.to_vec());
+                }
+
+                while let Ok(r) = st.read(&mut buffer) {
+                    if r == 0 {
+                        
+                    }
                     // * array
                     // + simple string
                     // $ bulk string
