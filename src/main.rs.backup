@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;
 
-const CRLF: &'static [u8; 2] = &b"\r\n";
+const CRLF: &[u8; 2] = b"\r\n";
 const CRLF_SIZE: usize = 2;
 
 fn main() {
@@ -42,22 +42,13 @@ fn main() {
 
                 let payload: String = String::from_utf8(buffer.to_vec()).unwrap();
 
-                println!("payload : {payload:?}");
-
                 // ping or echo
                 if buffer[0] == b'*' {
-                    // 2\r\n$4\r\necho\r\n$3\r\nhey\r\n
-                    let crlf_pos = crlf_pos(&buffer[1..]);
-                    let size = parse_data_size(&buffer[1..]);
-                    println!("crlf_pos ====> {crlf_pos:?}");
-                    println!("size : {size:?}");
-                    let response: Vec<String> = vec![];
-
-                    for i in 1..=size {
-                        let rst = parse_string(&buffer[crlf_pos + CRLF_SIZE + 1 + size..], i);
-
-                        println!("rst : {rst:?}");
-                    }
+                    let crlf_pos = buffer[1..]
+                        .windows(CRLF_SIZE)
+                        .position(|w| w == CRLF)
+                        .unwrap();
+                    let size = 
                 }
 
                 st.write_all(payload.as_bytes()).expect("write fail!");
@@ -69,50 +60,42 @@ fn main() {
     }
 }
 
-fn parse_string(buffer: &[u8], length: usize) -> String {
-    String::from_utf8(buffer[..=length].to_vec()).unwrap()
-}
+fn parse_string(buffer: &[u8], before_start: usize) -> (String, usize) {
+    println!("parse_string parameter before start : {before_start:?}");
+    // $4\r\necho\r\n
+    let mut start = 1;
+    // find \r\n position
+    let pos = buffer[start..]
+        .windows(CRLF_SIZE)
+        .position(|w| w == CRLF)
+        .unwrap()
+        + 1; // start '4'
 
-fn parse_data_size(buffer: &[u8]) -> usize {
-    // $4\r\n
-    let start = 0;
-    let pos = crlf_pos(buffer);
-
-    let dd = String::from_utf8(buffer.to_vec()).unwrap();
-
-    println!("parse_data_size buffer : {dd:?}");
-    println!("parse_data_size pos    : {pos:?}");
-
-    let raw_size = buffer[start..pos].to_vec();
-
-    println!("raw_size : {raw_size:?}");
-    let size = String::from_utf8(raw_size)
+    let string_length = String::from_utf8(buffer[start..pos].to_vec())
         .unwrap()
         .parse::<usize>()
         .unwrap();
+    start += CRLF_SIZE + 1;
 
-    println!("parse_data_size result : {size:?}");
+    // FIXME(joonho): 2024-03-21 마지막일 경우 start값 처리 수정 필요
 
-    size
-}
-
-fn crlf_pos(buffer: &[u8]) -> usize {
-    buffer.windows(CRLF_SIZE).position(|w| w == CRLF).unwrap()
+    return (
+        String::from_utf8(buffer[start..=(string_length + 1 + pos)].to_vec()).unwrap(),
+        start + string_length + pos + before_start,
+    );
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::parse_string;
 
-    //#[test]
+    #[test]
     fn parse_string_test() {
-        //let raw_data = b"$4\r\necho\r\n$5\r\nhello";
-        //let (result, start) = parse_string(raw_data, 0);
+        let raw_data = b"$4\r\necho\r\n$5\r\nhello";
+        let (result, start) = parse_string(raw_data, 0);
 
-        //assert_eq!("echo", result);
-        //assert_eq!(10, start);
-        //assert_eq!(&[13u8, 10u8], CRLF);
+        assert_eq!("echo", result);
+        assert_eq!(10, start);
 
         //let (result, start) = parse_string(&raw_data[start..], start);
 
