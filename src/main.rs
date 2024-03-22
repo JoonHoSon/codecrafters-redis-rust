@@ -44,23 +44,37 @@ fn main() {
 
                 println!("payload : {payload:?}");
 
+                let mut curr_pos = 0;
+
                 // ping or echo
                 if buffer[0] == b'*' {
+                    curr_pos += 1;
+
                     // 2\r\n$4\r\necho\r\n$3\r\nhey\r\n
-                    let crlf_pos = crlf_pos(&buffer[1..]);
-                    let size = parse_data_size(&buffer[1..]);
-                    println!("crlf_pos ====> {crlf_pos:?}");
-                    println!("size : {size:?}");
-                    let response: Vec<String> = vec![];
+                    let mut crlf_pos = get_crlf_pos(&buffer[curr_pos..]);
+                    let size: usize = parse_data_size(&buffer[curr_pos..]);
+                    let mut parsed_data: Vec<String> = Vec::with_capacity(size);
+                    curr_pos += crlf_pos + CRLF_SIZE;
 
                     for i in 1..=size {
-                        let rst = parse_string(&buffer[crlf_pos + CRLF_SIZE + 1 + size..], i);
+                        // $4\r\necho\r\n$3\r\nhey\r\n
+                        curr_pos += 1; // '$' pass
+                        let data_size = parse_data_size(&buffer[curr_pos..]);
+                        curr_pos += get_crlf_pos(&buffer[curr_pos..]);
 
-                        println!("rst : {rst:?}");
+                        println!("loop data size : {data_size:?}");
+
+                        let rst = parse_string(&buffer[curr_pos..curr_pos + data_size], i);
+
+                        parsed_data.push(rst);
+                    }
+
+                    println!("parsed_data : {parsed_data:#?}");
+
+                    if parsed_data.get(0).unwrap().as_str() == "ping" {
+                        st.write_all(b"pong").expect("write fail!");
                     }
                 }
-
-                st.write_all(payload.as_bytes()).expect("write fail!");
             }
             Err(e) => {
                 println!("error: {e}")
@@ -76,7 +90,7 @@ fn parse_string(buffer: &[u8], length: usize) -> String {
 fn parse_data_size(buffer: &[u8]) -> usize {
     // $4\r\n
     let start = 0;
-    let pos = crlf_pos(buffer);
+    let pos = get_crlf_pos(buffer);
 
     let dd = String::from_utf8(buffer.to_vec()).unwrap();
 
@@ -96,7 +110,7 @@ fn parse_data_size(buffer: &[u8]) -> usize {
     size
 }
 
-fn crlf_pos(buffer: &[u8]) -> usize {
+fn get_crlf_pos(buffer: &[u8]) -> usize {
     buffer.windows(CRLF_SIZE).position(|w| w == CRLF).unwrap()
 }
 
