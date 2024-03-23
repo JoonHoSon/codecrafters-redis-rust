@@ -5,9 +5,6 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;
 
-const CRLF: &'static [u8; 2] = &b"\r\n";
-const CRLF_SIZE: usize = 2;
-
 const BUFFER_SIZE: usize = 1024;
 
 fn main() {
