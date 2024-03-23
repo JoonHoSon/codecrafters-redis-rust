@@ -16,12 +16,14 @@ fn main() {
 
     for stream in listener.incoming() {
         thread::spawn(move || match stream {
-            Ok(mut st) => {
+            Ok(mut st) => loop {
                 let mut buffer: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
                 let mut read: Vec<u8> = vec![];
 
                 loop {
                     let received = st.read(&mut buffer).expect("Stream read fail!");
+
+                    println!("received : {received:?}");
 
                     read.extend_from_slice(&buffer[..received]);
 
@@ -30,11 +32,13 @@ fn main() {
                     }
                 }
 
-                println!("[read bytes] ===============> : {read:?}");
+                println!("read ==> {read:#?}");
 
                 let converted: String = String::from_utf8(read).unwrap();
                 let items = converted.split("\r\n");
                 let mut payload: Vec<String> = vec![];
+
+                println!("converted : {converted:?}");
 
                 for (idx, item) in items.enumerate() {
                     if idx == 0 {
@@ -64,7 +68,7 @@ fn main() {
                 }
 
                 st.flush().unwrap();
-            }
+            },
             Err(e) => {
                 println!("error: {e}")
             }
