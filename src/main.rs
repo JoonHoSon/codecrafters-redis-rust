@@ -51,6 +51,8 @@ fn main() {
                     }
                 }
 
+                println!("payload ==> {payload:#?}");
+
                 if payload.len() == 1 && &payload[0] == "ping" {
                     st.write_all(b"+PONG\r\n").unwrap();
                 } else if payload.len() == 2 && &payload[0] == "echo" {
