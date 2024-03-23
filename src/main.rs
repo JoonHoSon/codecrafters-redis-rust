@@ -58,8 +58,9 @@ fn main() {
                     let response = format!("${}\r\n{}\r\n", response_size, payload[1]);
 
                     st.write_all(response.as_bytes()).unwrap();
-                    st.flush().unwrap();
                 }
+
+                st.flush().unwrap();
             }
             Err(e) => {
                 println!("error: {e}")
