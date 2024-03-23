@@ -57,7 +57,7 @@ fn main() {
                 println!("payload : {payload:?}");
 
                 if payload.len() == 1 && &payload[0] == "ping" {
-                    st.write_all(b"+pong\r\n").unwrap();
+                    st.write_all(b"+PONG\r\n").unwrap();
                 } else if payload.len() == 2 && &payload[0] == "echo" {
                     let response_size = payload[1].len();
                     let response = format!("${}\r\n{}\r\n", response_size, payload[1]);
