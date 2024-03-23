@@ -21,7 +21,6 @@ fn main() {
                 let mut read: Vec<u8> = vec![];
 
                 loop {
-                    // read all bytes
                     let received = st.read(&mut buffer).expect("Stream read fail!");
 
                     read.extend_from_slice(&buffer[..received]);
@@ -30,6 +29,8 @@ fn main() {
                         break;
                     }
                 }
+
+                println!("[read bytes] ===============> : {read:?}");
 
                 let converted: String = String::from_utf8(read).unwrap();
                 let items = converted.split("\r\n");
