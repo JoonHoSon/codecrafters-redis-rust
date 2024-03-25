@@ -4,8 +4,7 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 const BUFFER_SIZE: usize = 1024;
@@ -13,25 +12,29 @@ const BUFFER_SIZE: usize = 1024;
 fn main() {
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-    let mut map: HashMap<String, String> = HashMap::new();
-    let (tx, rx) = mpsc::channel();
+    let map = Arc::new(Mutex::new(HashMap::<String, String>::new()));
+    //let (tx, rx) = mpsc::channel();
 
     // *2\r\n$4\r\necho\r\n$3\r\nhey\r\n
     // ["echo", "hey"]
 
     for stream in listener.incoming() {
-        thread::spawn(move || match stream {
+        match stream {
             Ok(mut st) => {
-                handle_request(&mut st, &tx);
-            }
+                println!("peer addr : {:#?}", st.peer_addr().unwrap());
+
+                let mut mm = Arc::clone(&map);
+
+                thread::spawn(move || handle_request(&mut st, &mut mm));
+            },
             Err(e) => {
-                println!("error: {e}")
+                println!("error: {e}");
             }
-        });
+        }
     }
 }
 
-fn handle_request(stream: &mut TcpStream, sender: &Sender<Vec<String>>) {
+fn handle_request(stream: &mut TcpStream, map: &Arc<Mutex<HashMap<String, String>>>) {
     loop {
         let mut buffer: [u8; BUFFER_SIZE] = [0; BUFFER_SIZE];
         let mut read: Vec<u8> = vec![];
@@ -46,15 +49,13 @@ fn handle_request(stream: &mut TcpStream, sender: &Sender<Vec<String>>) {
             }
         }
 
-        println!("read ==> {read:#?}");
-
         let converted: String = String::from_utf8(read).unwrap();
         let items = converted.split("\r\n");
         let mut payload: Vec<String> = vec![];
+        // let client_id = &stream.peer_addr().unwrap();
 
         for (idx, item) in items.enumerate() {
             if idx == 0 && !item.is_empty() {
-                println!("first item : {item:?}");
                 payload = Vec::with_capacity(item[1..].parse::<usize>().unwrap());
 
                 continue;
@@ -71,11 +72,11 @@ fn handle_request(stream: &mut TcpStream, sender: &Sender<Vec<String>>) {
             }
         }
 
-        println!("payload ====> {payload:?}");
-
         if payload.len() == 0 {
             break;
         }
+
+        println!("payload : {payload:?}");
 
         if &payload[0] == "ping" {
             stream.write_all(b"+PONG\r\n").unwrap();
@@ -85,14 +86,16 @@ fn handle_request(stream: &mut TcpStream, sender: &Sender<Vec<String>>) {
 
             stream.write_all(response.as_bytes()).unwrap();
         } else if &payload[0] == "set" && payload.len() == 3 {
-            map.insert(payload[1].to_owned(), payload[2].to_owned());
+            let mut mm = map.lock().unwrap();
 
+            mm.insert(payload[1].to_owned(), payload[2].to_owned());
             stream.write_all(b"+OK\r\n").unwrap();
         } else if &payload[0] == "get" && payload.len() == 2 {
-            println!("map ==> {map:#?}");
-            stream
-                .write_all(map.get(&payload[1]).unwrap().as_bytes())
-                .unwrap();
+            let mm = map.lock().unwrap();
+            let data = mm.get(&payload[1]).unwrap();
+            let response = format!("${}\r\n{}\r\n", data.len(), data);
+
+            stream.write_all(response.as_bytes()).unwrap();
         }
 
         stream.flush().unwrap();
